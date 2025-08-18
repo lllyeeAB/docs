@@ -242,7 +242,7 @@ try {
 ```
 
 常见错误码参考：[ERROR_CODES.md](./ERROR_CODES.md)<br>
-指纹类型定义：[ERROR_CODES.md](./TYPE.md)
+指纹类型定义：[TYPE.md](./TYPE.md)
 
 ## 🔍 调试
 
