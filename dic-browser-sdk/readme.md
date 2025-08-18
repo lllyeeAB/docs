@@ -5,10 +5,18 @@
 ## 🚀 快速开始
 
 ### 安装
+1.将 **dic-browser-sdk.zip** 解压在项目根目录下（或者你喜欢的其他任何地方），修改package.json：
 
 ```bash
-npm install dic-browser-sdk
+  "dependencies": {
+    "dic-browser-sdk": "file:./dic-browser-sdk"
+  }
 ```
+2.安装SDK所需依赖（在你项目根目录中执行）
+```bash
+npm install
+```
+3.完成
 
 ### 基础使用
 
@@ -224,7 +232,7 @@ for (const instance of instances) {
 }
 ```
 
-## 🛠️ 环境要求
+## 🛠️ 你需要准备
 
 - Node.js >= 18.0.0
 - Windows/macOS
