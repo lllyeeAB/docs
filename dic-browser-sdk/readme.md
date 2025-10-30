@@ -30,6 +30,7 @@ async function main() {
   
   // 2. 初始化SDK
   await sdk.initialize({
+    key: 'Your usage sdk key', // sdk key 必须
     baseDir: path.join(__dirname, 'data'),
     chromiumPath: '/path/to/chromium.exe', // 指定浏览器内核路径
     logLevel: 'info'
@@ -232,6 +233,16 @@ for (const instance of instances) {
 }
 ```
 
+### 环境Cookie
+```javascript
+// 获取Cookie
+const cookies = await sdk.getStandardCookies(instanceId);
+// 设置（合并）DIC格式Cookie
+await sdk.setStandardCookies(instanceId, JSON.parse(cookies));
+```
+
+注意事项：实例必须为关闭状态时操作；
+
 ## 🛠️ 你需要准备
 
 - Node.js >= 18.0.0
@@ -249,8 +260,7 @@ try {
 }
 ```
 
-常见错误码参考：[ERROR_CODES.md](./ERROR_CODES.md)<br>
-指纹类型定义：[TYPE.md](./TYPE.md)
+常见错误码参考：[ERROR_CODES.md](./docs/ERROR_CODES.md)<br>
 
 ## 🔍 调试
 
