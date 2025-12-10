@@ -85,7 +85,233 @@ await sdk.initialize({
 
 ### 2. 指纹配置
 
-#### 基础指纹配置
+#### 指纹类型解释
+
+```typescript
+/**
+ * 指纹相关类型定义
+ */
+
+// 指纹模式类型
+// noise = 噪音（一般配合一个具体的value使用，设定为1-100000之间的随机数）
+// truth = 真实（此时不需要传value）
+// custom = 自定义（部分指纹有特殊配置能力）
+export type FingerprintMode = 'noise' | 'truth' | 'custom';
+
+// 分辨率类型
+// truth = 真实
+// random = 随机
+// custom = 自定义（此时传value具体的分辨率，RatioValue）
+export type RatioMode = 'custom' | 'truth' | 'random';
+
+// 分辨率配置
+export interface RatioValue {
+  width: string;
+  height: string;
+}
+
+// WebGpu类型
+// inWebGL = 基于WebGL
+// truth = 真实
+// disable = 禁止WebGpu
+export type WebGPUType = 'inWebGL' | 'truth' | 'disable';
+
+// 地理位置类型（暂未支持自定义，可暂时忽略此类型）
+export type GeoType =
+  | 'ask' // 询问
+  | 'allow' // 允许
+  | 'block' // 禁止
+  | 'ask-ip' // 询问-基于ip
+  | 'ask-custom' // 询问-自定义（此时建议传具体的地理位置）
+  | 'allow-ip' // 允许-基于ip
+  | 'allow-custom'; // 允许-自定义（此时建议传具体的地理位置）
+
+// 时区类型
+// ip = 基于ip
+// custom = 自定义（传value为时区）
+export type TimezoneType = 'ip' | 'custom';
+
+// 字体类型
+// auto = 自动
+// custom = 自定义（此时需要传value为字体列表的数组，如["Abyssinica SIL","AnjaliOldLipi", "Apple Braille Pinpoint 6 Dot"]等）
+export type FontType = 'auto' | 'custom';
+
+// WebRTC类型
+// disable = 禁止
+// fake = 替代（此时需要声明value为内网ip）
+// truth = 真实
+export type RTCType = 'disable' | 'fake' | 'truth';
+
+// 设备内存值
+export type DeviceMemoryValue = '2' | '4' | '8';
+
+// 硬件并发数值
+export type HardwareConcurrencyValue =
+  | '2'
+  | '3'
+  | '4'
+  | '6'
+  | '8'
+  | '10'
+  | '12'
+  | '16'
+  | '20'
+  | '24';
+
+export interface IpInfo {
+  acceptLang: string[];
+  lang: string;
+  geo: {
+    longitude: string;
+    latitude: string;
+  };
+  timeZone: string;
+  city?: string;
+  country?: string;
+  countryCode?: string;
+  ip?: string;
+  region?: string;
+  regionCode?: string;
+}
+
+export interface ProxyProps {
+  host: string;
+  port: number;
+  type: 'HTTP' | 'HTTPS' | 'SOCKS5';
+  username?: string;
+  password?: string;
+  ipInfo?: IpInfo;
+}
+
+export interface AdvancedConfig {
+  /** 是否恢复上次会话 */
+  restoreLast?: 'enable' | 'disable';
+  /** URL过滤配置 */
+  urls?: {
+    black?: string; // 黑名单
+    white?: string; // 白名单
+  };
+  /** 扩展配置 */
+  extension?: {
+    disable?: boolean;
+    hideIds?: string;
+  };
+}
+
+export interface Account {
+  username: string;
+  password: string;
+  platform: string;
+}
+
+export interface FingerprintParams {
+  /** UA */
+  userAgent?: string;
+  /** 图标提示文本 */
+  iconHintText?: string;
+  /** 代理配置 */
+  proxy?: ProxyProps;
+  /** 账号配置 */
+  accounts?: Account[];
+  /** 高级配置 */
+  advancedConfig?: AdvancedConfig;
+  /** 详细指纹 */
+  fingerprint?: FingerprintConfig;
+}
+
+// 指纹配置
+export interface FingerprintConfig {
+  /** 音频配置 */
+  audio?: {
+    type: FingerprintMode;
+    value?: string;
+  };
+  /** 电池配置 */
+  battery?: {
+    type: FingerprintMode;
+    value?: string;
+  };
+  /** 客户端矩形配置 */
+  clientRects?: {
+    type: FingerprintMode;
+    value?: string;
+  };
+  /** 设备内存配置 */
+  deviceMemory?: {
+    type: FingerprintMode;
+    value?: DeviceMemoryValue;
+  };
+  /** 字体配置 */
+  font?: {
+    type: FontType;
+    value?: string;
+  };
+  /** WebRTC配置 */
+  rtc?: {
+    type: RTCType;
+    value?: string;
+  };
+  /** Canvas指纹配置 */
+  canvas?: {
+    type: FingerprintMode;
+    value?: string;
+  };
+  /** 剪贴板配置 */
+  clipboard?: {
+    type: 'enable' | 'disable';
+  };
+  /** 密码提示 */
+  passwordHint?: boolean;
+  /** WebGL配置 */
+  webgl?: {
+    type: 'custom' | 'truth';
+    vendor?: string;
+    renderer?: string;
+  };
+  /** WebGPU配置 */
+  webGPU?: {
+    type: WebGPUType;
+    value?: string;
+  };
+  webGPUImage?: {
+    type: FingerprintMode;
+    value?: string;
+  };
+  /** 硬件并发数 */
+  hardwareConcurrency?: {
+    type: FingerprintMode;
+    value?: HardwareConcurrencyValue;
+  };
+  /** 媒体设备配置 */
+  mediadevice?: {
+    type: FingerprintMode;
+    value?: string;
+  };
+  /** 是否开启硬件加速 */
+  accelerate?: boolean;
+  /** 分辨率 */
+  ratio?: {
+    type: RatioMode;
+    value?: RatioValue;
+  };
+  /** 语音指纹 */
+  speechvoices?: {
+    type: FingerprintMode;
+    value?: string;
+  };
+  /** 追踪 */
+  track?: string;
+  /** 启动参数 */
+  startParams?: string;
+  /** 端口扫描保护 */
+  port?: string;
+  /** 启动页面 */
+  startUrl?: string;
+}
+
+```
+
+#### 基础配置模式初始化（大部分指纹随机）
 ```javascript
 const fingerprint = await sdk.createFingerprint({
   userAgent: 'Mozilla/5.0 ...',
@@ -106,10 +332,13 @@ const fingerprint = await sdk.createFingerprint({
 });
 ```
 
-#### 高级指纹配置
+
+
+#### 高级配置模式初始化（自定义指纹）
 ```javascript
 const fingerprint = await sdk.createFingerprint({
   userAgent: 'Mozilla/5.0 ...',
+  // 详细指纹
   fingerprint: {
     canvas: { type: 'noise' },          // Canvas指纹
     rtc: { type: 'disable' },           // WebRTC
