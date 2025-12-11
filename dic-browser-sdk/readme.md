@@ -92,7 +92,7 @@ await sdk.initialize({
 #### 指纹类型解释
 
 注意：指纹中提到的所有“基于ip”指的是基于业务创建指纹时透传的 proxy.ipInfo 信息，并不是指本机ip；目前当设置为基于ip的指纹项，会自动使用 proxy.ipInfo 信息作为指纹支撑（lang、acceptlang、timeZone、geo）。
-关于ipInfo字段透传，[参考这里](http://ip-api.com/json) 检测结果中的字段即可。
+关于ipInfo字段透传，[参考这里](http://ip-api.com/json) 检测结果中的字段即可（注意该站https会失败，改为http访问）。
 
 ```typescript
 /**
@@ -101,7 +101,7 @@ await sdk.initialize({
 
 // 指纹模式类型
 // noise = 噪音（SDK内部处理）
-// truth = 真实（此时不需要传value）
+// truth = 真实（SDK内部处理）
 // custom = 自定义（部分指纹有特殊配置能力）
 export type FingerprintMode = 'noise' | 'truth' | 'custom';
 
@@ -179,6 +179,7 @@ export type HardwareConcurrencyValue =
 
 // 额外的业务透传信息，基于用户提供的代理信息检测的结果。（非必填项可不传）
 // 目前仅有必填项（acceptLang、lang、geo、timeZone）在满足一定条件下可为对应指纹项提供支撑的。
+// 可参考：http://ip-api.com/json
 export interface IpInfo {
   acceptLang: string[];
   lang: string;
