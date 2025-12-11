@@ -5,17 +5,21 @@
 ## 🚀 快速开始
 
 ### 安装
-1.将 **dic-browser-sdk.zip** 解压在项目根目录下（或者你喜欢的其他任何地方），修改package.json：
+
+1.将 **dic-browser-sdk.zip** 解压在项目根目录下（或者你喜欢的其他任何地方），修改 package.json：
 
 ```bash
   "dependencies": {
     "dic-browser-sdk": "file:./dic-browser-sdk"
   }
 ```
-2.安装SDK所需依赖（在你项目根目录中执行）
+
+2.安装 SDK 所需依赖（在你项目根目录中执行）
+
 ```bash
 npm install
 ```
+
 3.完成
 
 ### 基础使用
@@ -27,15 +31,15 @@ const path = require('path');
 async function main() {
   // 1. 创建SDK实例
   const sdk = createSDK();
-  
+
   // 2. 初始化SDK
   await sdk.initialize({
     key: 'Your usage sdk key', // sdk key 必须
     baseDir: path.join(__dirname, 'data'),
     chromiumPath: '/path/to/chromium.exe', // 指定浏览器内核路径
-    logLevel: 'info'
+    logLevel: 'info',
   });
-  
+
   // 3. 创建指纹配置
   const { instanceId, fingerprintConfig } = await sdk.createFingerprint({
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -44,26 +48,26 @@ async function main() {
       port: 8080,
       type: 'HTTP',
       username: 'user',
-      password: 'pass'
+      password: 'pass',
     },
     fingerprint: {
       canvas: { type: 'noise' },
-      rtc: { type: 'disable' }
-    }
+      rtc: { type: 'disable' },
+    },
   });
-  
+
   // 4. 启动浏览器实例
   const { id, wsUrl } = await sdk.launch({
     instanceId: instanceId,
-    fingerprintConfig: fingerprintConfig.config
+    fingerprintConfig: fingerprintConfig.config,
   });
-  
+
   console.log(`浏览器启动成功: ${id}`);
   console.log(`WebSocket URL: ${wsUrl}`);
-  
+
   // 5. 关闭实例
   await sdk.close(id);
-  
+
   // 6. 清理资源
   await sdk.cleanup();
 }
@@ -77,9 +81,9 @@ main().catch(console.error);
 
 ```javascript
 await sdk.initialize({
-  baseDir: './browser-data',           // 数据目录
-  chromiumPath: '/path/to/browser',    // 浏览器路径
-  logLevel: 'info'                     // 日志级别
+  baseDir: './browser-data', // 数据目录
+  chromiumPath: '/path/to/browser', // 浏览器路径
+  logLevel: 'info', // 日志级别
 });
 ```
 
@@ -87,16 +91,31 @@ await sdk.initialize({
 
 #### 指纹类型解释
 
+注意：指纹中提到的所有“基于ip”指的是基于业务创建指纹时透传的 proxy.ipInfo 信息，并不是指本机ip；目前当设置为基于ip的指纹项，会自动使用 proxy.ipInfo 信息作为指纹支撑（lang、acceptlang、timeZone、geo）。
+关于ipInfo字段透传，[参考这里](http://ip-api.com/json) 检测结果中的字段即可。
+
 ```typescript
 /**
  * 指纹相关类型定义
  */
 
 // 指纹模式类型
-// noise = 噪音（一般配合一个具体的value使用，设定为1-100000之间的随机数）
+// noise = 噪音（SDK内部处理）
 // truth = 真实（此时不需要传value）
 // custom = 自定义（部分指纹有特殊配置能力）
 export type FingerprintMode = 'noise' | 'truth' | 'custom';
+
+// ip指纹类型
+// ip = 代表基于ip信息(proxy.ipInfo)
+// custom = 代表自定义传入(此时传对应的value)
+export type IpFingerprintType = 'ip' | 'custom';
+
+
+// 界面语言类型
+// for-acceptLang = 来自语言项（继承）
+// truth = 真实
+// custom = 代表自定义传入(此时传对应的value)
+export type LangType = 'for-acceptLang' | 'truth' | 'custom';
 
 // 分辨率类型
 // truth = 真实
@@ -116,15 +135,15 @@ export interface RatioValue {
 // disable = 禁止WebGpu
 export type WebGPUType = 'inWebGL' | 'truth' | 'disable';
 
-// 地理位置类型（暂未支持自定义，可暂时忽略此类型）
+// 地理位置类型
 export type GeoType =
   | 'ask' // 询问
-  | 'allow' // 允许
-  | 'block' // 禁止
   | 'ask-ip' // 询问-基于ip
   | 'ask-custom' // 询问-自定义（此时建议传具体的地理位置）
+  | 'allow' // 允许
   | 'allow-ip' // 允许-基于ip
-  | 'allow-custom'; // 允许-自定义（此时建议传具体的地理位置）
+  | 'allow-custom' // 允许-自定义（此时建议传具体的地理位置）
+  | 'block'; // 禁止
 
 // 时区类型
 // ip = 基于ip
@@ -158,6 +177,8 @@ export type HardwareConcurrencyValue =
   | '20'
   | '24';
 
+// 额外的业务透传信息，基于用户提供的代理信息检测的结果。（非必填项可不传）
+// 目前仅有必填项（acceptLang、lang、geo、timeZone）在满足一定条件下可为对应指纹项提供支撑的。
 export interface IpInfo {
   acceptLang: string[];
   lang: string;
@@ -174,6 +195,7 @@ export interface IpInfo {
   regionCode?: string;
 }
 
+// 用户的代理信息（直接交给内核代理转发）
 export interface ProxyProps {
   host: string;
   port: number;
@@ -198,6 +220,7 @@ export interface AdvancedConfig {
   };
 }
 
+// 账号信息
 export interface Account {
   username: string;
   password: string;
@@ -221,6 +244,26 @@ export interface FingerprintParams {
 
 // 指纹配置
 export interface FingerprintConfig {
+    /** 语言配置 */
+  acceptLang?: {
+    type: IpFingerprintType;
+    value?: string[];
+  };
+  /** 界面语言配置 */
+  lang?: {
+    type: LangType;
+    value?: string;
+  };
+  /** 时区配置 */
+  timeZone?: {
+    type: IpFingerprintType;
+    value?: string;
+  };
+  /** 地理位置配置 */
+  geo?: {
+    type: GeoType;
+    value?: string;
+  };
   /** 音频配置 */
   audio?: {
     type: FingerprintMode;
@@ -244,7 +287,7 @@ export interface FingerprintConfig {
   /** 字体配置 */
   font?: {
     type: FontType;
-    value?: string;
+    value?: string[]; // 当type为custom时的字体标识
   };
   /** WebRTC配置 */
   rtc?: {
@@ -308,10 +351,10 @@ export interface FingerprintConfig {
   /** 启动页面 */
   startUrl?: string;
 }
-
 ```
 
-#### 基础配置模式初始化（大部分指纹随机）
+#### 基础指纹配置
+
 ```javascript
 const fingerprint = await sdk.createFingerprint({
   userAgent: 'Mozilla/5.0 ...',
@@ -332,53 +375,57 @@ const fingerprint = await sdk.createFingerprint({
 });
 ```
 
+#### 高级指纹配置
 
-
-#### 高级配置模式初始化（自定义指纹）
 ```javascript
 const fingerprint = await sdk.createFingerprint({
   userAgent: 'Mozilla/5.0 ...',
   // 详细指纹
   fingerprint: {
-    canvas: { type: 'noise' },          // Canvas指纹
-    rtc: { type: 'disable' },           // WebRTC
-    audio: { type: 'noise' },           // 音频指纹
-    font: { type: 'auto' },             // 字体
-    deviceMemory: { 
-      type: 'custom', 
-      value: '8' 
+    canvas: { type: 'noise' }, // Canvas指纹
+    rtc: { type: 'disable' }, // WebRTC
+    audio: { type: 'noise' }, // 音频指纹
+    font: { type: 'auto' }, // 字体
+    deviceMemory: {
+      type: 'custom',
+      value: '8',
     },
-    hardwareConcurrency: { 
-      type: 'custom', 
-      value: '8' 
+    hardwareConcurrency: {
+      type: 'custom',
+      value: '8',
     },
     ratio: {
       type: 'custom',
-      value: { width: '1920', height: '1080' }
-    }
+      value: { width: '1920', height: '1080' },
+    },
   },
   advancedConfig: {
-    restoreLast: 'enable',              // 恢复上次会话
+    restoreLast: 'enable', // 恢复上次会话
   },
-  accounts: [{                          // 账号信息
-    platform: 'example.com',
-    username: 'user123',
-    password: 'pass123'
-  }]
+  accounts: [
+    {
+      // 账号信息
+      platform: 'example.com',
+      username: 'user123',
+      password: 'pass123',
+    },
+  ],
 });
 ```
 
 ### 3. 浏览器实例管理
 
 #### 启动实例
+
 ```javascript
 const { id, wsUrl } = await sdk.launch({
-  instanceId: 'my-instance',           // 可选，不提供则自动生成
-  fingerprintConfig: fingerprint.config
+  instanceId: 'my-instance', // 可选，不提供则自动生成
+  fingerprintConfig: fingerprint.config,
 });
 ```
 
 #### 实例状态查询
+
 ```javascript
 // 获取单个实例信息
 const instance = sdk.getInstance('instance-id');
@@ -396,6 +443,7 @@ console.log(status.totalInstances, status.runningInstances);
 ```
 
 #### 关闭实例
+
 ```javascript
 // 普通关闭
 await sdk.close('instance-id');
@@ -404,6 +452,7 @@ await sdk.close('instance-id');
 ## 🔧 高级用法
 
 ### 代理配置
+
 ```javascript
 // HTTP代理
 proxy: {
@@ -425,6 +474,7 @@ proxy: {
 ```
 
 ### 事件监听
+
 ```javascript
 sdk.on('instanceLaunched', (instance) => {
   console.log('实例启动:', instance.id);
@@ -440,6 +490,7 @@ sdk.on('processExit', (data) => {
 ```
 
 ### 批量管理
+
 ```javascript
 // 启动多个实例
 const instances = [];
@@ -448,11 +499,11 @@ for (let i = 0; i < 5; i++) {
     userAgent: `UserAgent-${i}`,
     // ... 其他配置
   });
-  
+
   const instance = await sdk.launch({
-    fingerprintConfig: fingerprint.config
+    fingerprintConfig: fingerprint.config,
   });
-  
+
   instances.push(instance);
 }
 
@@ -462,7 +513,8 @@ for (const instance of instances) {
 }
 ```
 
-### 环境Cookie
+### 环境 Cookie
+
 ```javascript
 // 获取Cookie
 const cookies = await sdk.getStandardCookies(instanceId);
@@ -489,15 +541,16 @@ try {
 }
 ```
 
-常见错误码参考：[ERROR_CODES.md](./docs/ERROR_CODES.md)<br>
+常见错误码参考：[ERROR_CODES.md](./docs/ERROR_CODES.md)`<br>`
 
 ## 🔍 调试
 
 启用详细日志：
+
 ```javascript
 await sdk.initialize({
   baseDir: './data',
-  logLevel: 'debug'  // error, warn, info, debug
+  logLevel: 'debug', // error, warn, info, debug
 });
 ```
 
