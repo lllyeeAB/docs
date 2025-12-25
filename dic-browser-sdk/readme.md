@@ -186,6 +186,7 @@ export interface IpInfo {
   geo: {
     longitude: string;
     latitude: string;
+    accuracy: string;
   };
   timeZone: string;
   city?: string;
