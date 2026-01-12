@@ -91,8 +91,8 @@ await sdk.initialize({
 
 #### 指纹类型解释
 
-注意：指纹中提到的所有“基于ip”指的是基于业务创建指纹时透传的 proxy.ipInfo 信息，并不是指本机ip；目前当设置为基于ip的指纹项，会自动使用 proxy.ipInfo 信息作为指纹支撑（lang、acceptlang、timeZone、geo）。
-关于ipInfo字段透传，[参考这里](http://ip-api.com/json) 检测结果中的字段即可（注意该站https会失败，改为http访问）。
+注意：指纹中提到的所有“基于 ip”指的是基于业务创建指纹时透传的 proxy.ipInfo 信息，并不是指本机 ip；目前当设置为基于 ip 的指纹项，会自动使用 proxy.ipInfo 信息作为指纹支撑（lang、acceptlang、timeZone、geo）。
+关于 ipInfo 字段透传，[参考这里](http://ip-api.com/json) 检测结果中的字段即可（注意该站 https 会失败，改为 http 访问）。
 
 ```typescript
 /**
@@ -109,7 +109,6 @@ export type FingerprintMode = 'noise' | 'truth' | 'custom';
 // ip = 代表基于ip信息(proxy.ipInfo)
 // custom = 代表自定义传入(此时传对应的value)
 export type IpFingerprintType = 'ip' | 'custom';
-
 
 // 界面语言类型
 // for-acceptLang = 来自语言项（继承）
@@ -222,6 +221,17 @@ export interface AdvancedConfig {
   };
 }
 
+/**
+ * 操作系统类型 (WINDOWS:Windows MAC:Mac ANDROID:Android IOS:iOS LINUX:Linux)
+ */
+export enum OsType {
+  Windows = 'WINDOWS',
+  Mac = 'MAC',
+  Android = 'ANDROID',
+  Ios = 'IOS',
+  Linux = 'LINUX',
+}
+
 // 账号信息
 export interface Account {
   username: string;
@@ -230,8 +240,12 @@ export interface Account {
 }
 
 export interface FingerprintParams {
+  /** 操作系统类型（默认windows） */
+  uaOs?: OsType;
   /** UA */
   userAgent?: string;
+  /** 序号 */
+  serialNumber?: number;
   /** 图标提示文本 */
   iconHintText?: string;
   /** 代理配置 */
@@ -246,7 +260,7 @@ export interface FingerprintParams {
 
 // 指纹配置
 export interface FingerprintConfig {
-    /** 语言配置 */
+  /** 语言配置 */
   acceptLang?: {
     type: IpFingerprintType;
     value?: string[];
@@ -338,6 +352,11 @@ export interface FingerprintConfig {
   ratio?: {
     type: RatioMode;
     value?: RatioValue;
+  };
+  /** 窗口配置 */
+  windowConfig?: {
+    width: number;
+    height: number;
   };
   /** 语音指纹 */
   speechvoices?: {
