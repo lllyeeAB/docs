@@ -36,6 +36,7 @@ async function main() {
   await sdk.initialize({
     key: 'Your usage sdk key', // sdk key 必须
     baseDir: path.join(__dirname, 'data'),
+    sourceDataDir: string; // 内核源数据模板路径
     chromiumPath: '/path/to/chromium.exe', // 指定浏览器内核路径
     logLevel: 'info',
   });
