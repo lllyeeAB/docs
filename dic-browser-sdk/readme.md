@@ -370,7 +370,7 @@ export interface FingerprintConfig {
   /** 端口扫描保护 */
   port?: string;
   /** 启动页面 */
-  startUrl?: string;
+  startUrl?: string[];
 }
 ```
 
@@ -539,7 +539,7 @@ for (const instance of instances) {
 ```javascript
 // 获取Cookie
 const cookies = await sdk.getStandardCookies(instanceId);
-// 设置（合并）DIC格式Cookie
+// 设置（合并）标准格式Cookie
 await sdk.setStandardCookies(instanceId, JSON.parse(cookies));
 ```
 
