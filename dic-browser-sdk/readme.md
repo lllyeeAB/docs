@@ -186,10 +186,11 @@ export type GeoType =
 export type FontType = 'truth' | 'custom';
 
 // WebRTC类型
-// disable = 禁止
-// replace = 替代（此时需要声明value）
-// truth = 真实
-export type RTCType = 'disable' | 'replace' | 'truth';
+// disable = 禁止（不向站点暴露 WebRTC IP）
+// replace = 替代（向站点暴露你指定的 IP，或由 SDK 回退取 proxy.ipInfo.ip）
+// forward = 转发（走 forward 语义，并固定补 rtc.stun）
+// truth = 真实（保留真实 WebRTC 行为）
+export type RTCType = 'disable' | 'replace' | 'forward' | 'truth';
 
 // 设备内存值
 export type DeviceMemoryValue = '2' | '4' | '8';
@@ -341,7 +342,8 @@ export interface FingerprintConfig {
   /** WebRTC配置 */
   rtc?: {
     type: RTCType;
-    value?: string;
+    value?: string; // replace / forward 模式下优先使用该值
+    useRandomInternalIp?: boolean; // 仅 replace 模式生效，开启后自动生成随机内网 IP
   };
   /** Canvas指纹配置 */
   canvas?: {
@@ -359,6 +361,8 @@ export interface FingerprintConfig {
     type: 'custom' | 'truth';
     vendor?: string;
     renderer?: string;
+    adapterInfoArchitecture?: string; // WebGPU adapter architecture，对应内核参数 webgpu.arch
+    adapterInfoVendor?: string; // WebGPU adapter vendor，对应内核参数 webgpu.vendor
   };
   /** WebGPU配置 */
   webGPU?: {
@@ -479,8 +483,83 @@ const fingerprint = await sdk.createFingerprint({
 
 - `userAgent` 由业务方传完整字符串，SDK 不会自动修改、拼接或纠正。
 - `fingerprint.platformVersion` 由业务方按目标系统版本传入，SDK 只负责透传给内核的 `platform.version` 参数。
+- 建议 `chromiumPath` 对应的内核版本与 `userAgent` 中的 Chrome 主版本尽量保持一致。
 - 建议 `userAgent`、目标系统、`platformVersion` 三者保持一致，否则业务站点可能识别出环境不一致。
 - iOS 场景通常重点是传正确的 UA；`platformVersion` 主要用于配合 Client Hint 场景。
+
+#### WebRTC 使用说明
+
+可以先按下面的方式理解 `fingerprint.rtc`：
+
+- `disable`
+  - 不希望站点通过 WebRTC 看到 IP 时使用
+- `truth`
+  - 保留真实 WebRTC 行为时使用
+- `replace`
+  - 希望站点看到一个你控制的 IP 时使用
+- `forward`
+  - 需要走 forward 语义时使用；SDK 会固定补 `rtc.stun = stun:stun.l.google.com:19302`
+
+`replace` 和 `forward` 的取值规则：
+
+- SDK 不负责做代理检测。
+- `rtc.value` 优先使用业务方显式传入的 `fingerprint.rtc.value`
+- 如果未传 `fingerprint.rtc.value`，则回退使用业务透传的 `proxy.ipInfo.ip`
+
+`replace` 模式下的额外能力：
+
+- 如果传 `fingerprint.rtc.useRandomInternalIp = true`，SDK 会优先生成随机内网 IP，并忽略 `rtc.value` / `proxy.ipInfo.ip`
+- 当前 SDK 只支持“不保持模式”，也就是每次生成新的随机内网 IP；还不支持跨次复用同一个随机 IP
+
+示例：
+
+```javascript
+// 1. 手动指定一个 WebRTC IP
+rtc: {
+  type: 'replace',
+  value: '9.9.9.9',
+}
+
+// 2. 让 SDK 直接使用业务传入的 proxy.ipInfo.ip
+rtc: {
+  type: 'replace',
+}
+
+// 3. 使用随机内网 IP
+rtc: {
+  type: 'replace',
+  useRandomInternalIp: true,
+}
+
+// 4. 使用 forward 模式
+rtc: {
+  type: 'forward',
+  value: '8.8.8.8',
+}
+```
+
+#### WebGPU metadata 说明
+
+如果业务方需要同时控制 WebGL 和 WebGPU adapter 信息，可以在 `webgl.type = 'custom'` 时传：
+
+- `fingerprint.webgl.vendor` -> 内核参数 `webgl.vendor`
+- `fingerprint.webgl.renderer` -> 内核参数 `webgl.render`
+- `fingerprint.webgl.adapterInfoArchitecture` -> 内核参数 `webgpu.arch`
+- `fingerprint.webgl.adapterInfoVendor` -> 内核参数 `webgpu.vendor`
+
+这些字段由业务方按目标设备信息传入，SDK 只负责透传，不会自动推导。
+
+示例：
+
+```javascript
+webgl: {
+  type: 'custom',
+  vendor: 'Google Inc. (Intel Inc.)',
+  renderer: 'ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0)',
+  adapterInfoArchitecture: 'gen-9',
+  adapterInfoVendor: 'intel',
+}
+```
 
 ### 3. 浏览器实例管理
 
@@ -591,7 +670,11 @@ const cookies = await sdk.getStandardCookies(instanceId);
 await sdk.setStandardCookies(instanceId, cookies);
 ```
 
-注意事项：实例必须为关闭状态时操作；
+注意事项：
+
+- 实例必须为关闭状态时操作。
+- 当前 SDK 支持多个内核版本（如 134 / 142 / 143）。跨内核版本迁移时，Cookie 存在兼容风险。
+- 对业务侧来说，这意味着旧版本内核下生成的本地 Cookie，在切换到新版本内核后，不建议默认认为一定还能原样延续。
 
 ## 🛠️ 你需要准备
 
