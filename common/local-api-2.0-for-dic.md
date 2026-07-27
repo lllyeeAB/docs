@@ -93,7 +93,7 @@ V2 使用统一响应包络：
 
 ## 接口范围
 
-当前支持 72 个 V2 接口：
+当前支持 71 个 V2 接口：
 
 | 模块              | 数量 | 说明                                                           |
 | ----------------- | ---: | -------------------------------------------------------------- |
@@ -104,7 +104,7 @@ V2 使用统一响应包络：
 | 环境分组          |    5 | 环境分组增删改查。                                             |
 | 成员与权限        |    8 | 成员增删改查、成员可访问分组、角色和权限查询。                 |
 | 代理 Proxies      |    7 | 代理增删改查和代理检测。                                       |
-| Cookie            |    5 | Cookie 查询、导入、清空、导出。                                |
+| Cookie            |    4 | Cookie 查询、导入和清空。                                      |
 | 指纹 Fingerprints |    6 | 指纹查询、覆盖、刷新、生成和选项查询。                         |
 
 # 运行状态 Runtime
@@ -1866,6 +1866,11 @@ POST /openapi/v2/proxies/check
 
 # Cookie
 
+说明：
+
+- Cookie 接口当前支持普通 Cookie 读写场景。若环境启用了受保护 Cookie 加密，本版本暂不支持通过 Local API 查询、导入或清空该环境 Cookie。
+- 查询返回的 Cookie 使用标准 `value` 字段；导入 Cookie 时也请传入 `value` 字段。
+
 ## 查询环境 Cookie
 
 ### 接口地址
@@ -1966,30 +1971,6 @@ DELETE /openapi/v2/profiles/{profileId}/cookies
 | 名称        | 类型   | 必填 | 说明      |
 | ----------- | ------ | ---- | --------- |
 | `profileId` | string | 是   | 环境 ID。 |
-
-## 导出环境 Cookie
-
-### 接口地址
-
-```http
-POST /openapi/v2/profiles/{profileId}/cookies/export
-```
-
-用于导出环境 Cookie。
-
-### 路径参数
-
-| 名称        | 类型   | 必填 | 说明      |
-| ----------- | ------ | ---- | --------- |
-| `profileId` | string | 是   | 环境 ID。 |
-
-### 请求参数
-
-| 名称                | 类型     | 必填 | 说明                                             |
-| ------------------- | -------- | ---- | ------------------------------------------------ |
-| `format`            | string   | 否   | 导出格式，例如 `json`。                          |
-| `domains`           | string[] | 否   | 需要导出的域名列表。不传或传空表示导出全部域名。 |
-| `include_http_only` | boolean  | 否   | 是否包含 HttpOnly Cookie。                       |
 
 # 指纹 Fingerprints
 
