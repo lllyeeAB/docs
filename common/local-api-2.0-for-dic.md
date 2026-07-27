@@ -67,7 +67,7 @@ V2 使用统一响应包络：
 
 ## 分页规则
 
-列表接口支持两种分页方式：
+部分列表接口支持两种分页方式：
 
 | 方式     | 参数                | 说明                                                 |
 | -------- | ------------------- | ---------------------------------------------------- |
@@ -93,14 +93,344 @@ V2 使用统一响应包络：
 
 ## 接口范围
 
-当前支持 37 个 V2 接口：
+当前支持 72 个 V2 接口：
 
-| 模块              | 数量 | 说明                                                  |
-| ----------------- | ---: | ----------------------------------------------------- |
-| 环境 Profiles     |   19 | 环境增删改查、账号、分组移动、代理绑定、打开/关闭等。 |
-| 代理 Proxies      |    7 | 代理增删改查和代理检测。                              |
-| Cookie            |    5 | Cookie 查询、导入、清空、导出。                       |
-| 指纹 Fingerprints |    6 | 指纹查询、覆盖、刷新、生成和选项查询。                |
+| 模块              | 数量 | 说明                                                           |
+| ----------------- | ---: | -------------------------------------------------------------- |
+| 运行状态 Runtime  |    9 | 服务状态、版本、健康状态、频控、运行环境、批量停止和可用内核。 |
+| 环境 Profiles     |   19 | 环境增删改查、账号、分组移动、代理绑定、启动/停止等。          |
+| 扩展与书签        |    7 | 环境书签、环境扩展设置、扩展列表和扩展分组。                   |
+| 标签 Tags         |    6 | 标签增删改查，以及给环境添加或移除标签。                       |
+| 环境分组          |    5 | 环境分组增删改查。                                             |
+| 成员与权限        |    8 | 成员增删改查、成员可访问分组、角色和权限查询。                 |
+| 代理 Proxies      |    7 | 代理增删改查和代理检测。                                       |
+| Cookie            |    5 | Cookie 查询、导入、清空、导出。                                |
+| 指纹 Fingerprints |    6 | 指纹查询、覆盖、刷新、生成和选项查询。                         |
+
+# 运行状态 Runtime
+
+## 查询服务状态
+
+### 接口地址
+
+```http
+GET /openapi/v2/status
+```
+
+用于确认 Local API 服务是否可用，并返回当前服务端口、版本和宿主类型。
+
+### 响应示例
+
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "service": "dicloak-local-api",
+    "status": "ok",
+    "api_version": "2.0.0",
+    "client_version": "2.9.11",
+    "port": 52100,
+    "auth_required": true,
+    "host": "desktop"
+  },
+  "next": null
+}
+```
+
+## 查询版本信息
+
+### 接口地址
+
+```http
+GET /openapi/v2/version
+```
+
+用于查询 Local API 版本、客户端版本、系统平台和本地已安装的浏览器内核版本信息。
+
+### 响应示例
+
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "api_version": "2.0.0",
+    "client_version": "2.9.11",
+    "platform": "darwin",
+    "arch": "arm64",
+    "kernel": {
+      "installed": ["142.0.7444.60"]
+    },
+    "host": "desktop"
+  },
+  "next": null
+}
+```
+
+## 查询能力声明
+
+### 接口地址
+
+```http
+GET /openapi/v2/capabilities
+```
+
+用于查询当前 Local API 支持的能力，适合调用方在运行时判断是否可以使用环境、代理、Cookie、指纹、书签、扩展、标签、环境分组、成员权限、运行状态和内核查询等接口。
+
+响应中的字段为布尔值。`true` 表示当前 Local API 宿主支持该能力，`false` 表示该能力属于已知可选能力，但当前阶段不可用。
+
+### 响应示例
+
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "profiles": true,
+    "cookies": true,
+    "proxies": true,
+    "fingerprints": true,
+    "bookmarks": true,
+    "extensions": true,
+    "tags": true,
+    "profile_groups": true,
+    "members": true,
+    "roles": true,
+    "permissions": true,
+    "start_stop": true,
+    "stop_all": true,
+    "sessions": true,
+    "kernels": true,
+    "kernel_actions": false,
+    "tabs": false,
+    "host": "desktop"
+  },
+  "next": null
+}
+```
+
+## 查询健康状态
+
+### 接口地址
+
+```http
+GET /openapi/v2/health
+```
+
+用于查询 Local API 当前健康状态，以及认证、运行态查询、API 服务连接和内核数据来源是否可用。
+
+### 响应示例
+
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "status": "ok",
+    "checks": {
+      "local_api": "ok",
+      "auth": "ok",
+      "runtime_bridge": "ok",
+      "backend_forwarder": "configured",
+      "kernel_provider": "ok"
+    },
+    "host": "desktop"
+  },
+  "next": null
+}
+```
+
+## 查询频控说明
+
+### 接口地址
+
+```http
+GET /openapi/v2/rate-limits
+```
+
+用于查询当前 Local API 请求可能受到的本地频控和服务端频控说明。
+
+### 响应示例
+
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "local": {
+      "enabled": true,
+      "strategy": "koa-ratelimit",
+      "limit": 60,
+      "window_ms": 6000
+    },
+    "backend": {
+      "enabled": true,
+      "strategy": "backend-managed"
+    },
+    "host": "desktop"
+  },
+  "next": null
+}
+```
+
+## 查询正在运行的环境
+
+### 接口地址
+
+```http
+GET /openapi/v2/sessions
+```
+
+用于查询当前设备正在运行的环境列表，包括进程 ID、调试端口和 WebSocket 地址等运行态信息。
+
+### 响应示例
+
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "items": [
+      {
+        "session_id": "desktop:1876881021063852034:12345",
+        "profile_id": "1876881021063852034",
+        "serial_no": 166,
+        "name": "facebook-01",
+        "status": "running",
+        "pid": "12345",
+        "debug_port": 17539,
+        "web_socket_url": "ws://127.0.0.1:17539/devtools/browser/xxx",
+        "started_at": null,
+        "host": "desktop"
+      }
+    ]
+  },
+  "next": null
+}
+```
+
+## 停止全部正在运行的环境
+
+### 接口地址
+
+```http
+POST /openapi/v2/sessions/stop-all
+```
+
+用于停止当前设备上正在运行的全部环境。默认会按完整关闭流程处理每个环境，包括关闭后的数据同步。
+
+### 请求参数
+
+请求体可选。不传请求体时，按默认完整关闭流程执行。
+
+| 名称                              | 类型    | 必填 | 说明                         |
+| --------------------------------- | ------- | ---- | ---------------------------- |
+| `skip_cookie_sync_after_close`    | boolean | 否   | 是否跳过停止后 Cookie 同步。 |
+| `skip_data_sync_after_close`      | boolean | 否   | 是否跳过停止后数据同步。     |
+| `skip_extension_sync_after_close` | boolean | 否   | 是否跳过停止后扩展数据同步。 |
+
+### 请求示例
+
+```bash
+curl -X POST "http://127.0.0.1:52100/openapi/v2/sessions/stop-all" \
+  -H "X-API-KEY: your-local-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "skip_cookie_sync_after_close": false,
+    "skip_data_sync_after_close": false,
+    "skip_extension_sync_after_close": false
+  }'
+```
+
+### 响应示例
+
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "requested": 2,
+    "closed": ["1876881021063852034"],
+    "forced": [],
+    "failed": []
+  },
+  "next": null
+}
+```
+
+## 查询指定环境运行状态
+
+### 接口地址
+
+```http
+GET /openapi/v2/profiles/{profileId}/session
+```
+
+用于查询指定环境在当前设备上的运行状态。环境未运行时仍返回成功，`data.status` 为 `stopped`。
+
+### 路径参数
+
+| 名称        | 类型   | 必填 | 说明    |
+| ----------- | ------ | ---- | ------- |
+| `profileId` | string | 是   | 环境 ID |
+
+### 未运行响应示例
+
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "session_id": null,
+    "profile_id": "1876881021063852034",
+    "serial_no": null,
+    "name": null,
+    "status": "stopped",
+    "pid": null,
+    "debug_port": null,
+    "web_socket_url": null,
+    "started_at": null,
+    "host": "desktop"
+  },
+  "next": null
+}
+```
+
+## 查询已安装内核
+
+### 接口地址
+
+```http
+GET /openapi/v2/kernels
+```
+
+用于查询当前设备已安装的浏览器内核列表。
+
+### 响应示例
+
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "items": [
+      {
+        "kernel_version": "142.0.7444.60",
+        "name": "Chromium 142.0.7444.60",
+        "status": "loaded",
+        "installed": true,
+        "loaded": true,
+        "platform": "darwin",
+        "arch": "arm64",
+        "progress_percent": null,
+        "host": "desktop"
+      }
+    ]
+  },
+  "next": null
+}
+```
 
 # 环境 Profiles
 
@@ -419,15 +749,15 @@ curl -X POST "http://127.0.0.1:52100/openapi/v2/profiles/1876881021063852034/clo
   }'
 ```
 
-## 打开环境
+## 启动环境
 
 ### 接口地址
 
 ```http
-PATCH /openapi/v2/profiles/{profileId}/open
+POST /openapi/v2/profiles/{profileId}/start
 ```
 
-用于打开环境。成功后可从响应 `data` 中获取调试端口或 WebSocket 地址。
+用于启动环境。成功后可从响应 `data` 中获取调试端口或 WebSocket 地址。
 
 ### 路径参数
 
@@ -440,22 +770,22 @@ PATCH /openapi/v2/profiles/{profileId}/open
 | 名称                           | 类型    | 必填 | 说明                                     |
 | ------------------------------ | ------- | ---- | ---------------------------------------- |
 | `client_ip`                    | string  | 否   | 客户端 IP。                              |
-| `headless`                     | boolean | 否   | 是否无头打开。桌面客户端通常传 `false`。 |
-| `skip_proxy_check`             | boolean | 否   | 是否跳过打开前代理检测。                 |
-| `skip_cookie_sync_before_open` | boolean | 否   | 是否跳过打开前 Cookie 同步。             |
-| `skip_data_sync_before_open`   | boolean | 否   | 是否跳过打开前数据同步。                 |
-| `skip_extension_data_sync`     | boolean | 否   | 是否跳过打开前扩展数据同步。             |
+| `headless`                     | boolean | 否   | 是否无头启动。桌面客户端通常传 `false`。 |
+| `skip_proxy_check`             | boolean | 否   | 是否跳过启动前代理检测。                 |
+| `skip_cookie_sync_before_open` | boolean | 否   | 是否跳过启动前 Cookie 同步。             |
+| `skip_data_sync_before_open`   | boolean | 否   | 是否跳过启动前数据同步。                 |
+| `skip_extension_data_sync`     | boolean | 否   | 是否跳过启动前扩展数据同步。             |
 
 可选查询参数：
 
 | 名称   | 类型   | 必填 | 说明                                                      |
 | ------ | ------ | ---- | --------------------------------------------------------- |
-| `sync` | string | 否   | 传 `false` 时可返回打开进度，最终结果仍使用 V2 响应格式。 |
+| `sync` | string | 否   | 传 `false` 时可返回启动进度，最终结果仍使用 V2 响应格式。 |
 
 ### 请求示例
 
 ```bash
-curl -X PATCH "http://127.0.0.1:52100/openapi/v2/profiles/1876881021063852034/open" \
+curl -X POST "http://127.0.0.1:52100/openapi/v2/profiles/1876881021063852034/start" \
   -H "X-API-KEY: your-local-api-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -483,15 +813,15 @@ curl -X PATCH "http://127.0.0.1:52100/openapi/v2/profiles/1876881021063852034/op
 }
 ```
 
-## 关闭环境
+## 停止环境
 
 ### 接口地址
 
 ```http
-PATCH /openapi/v2/profiles/{profileId}/close
+POST /openapi/v2/profiles/{profileId}/stop
 ```
 
-用于关闭环境。
+用于停止环境。
 
 ### 路径参数
 
@@ -503,14 +833,14 @@ PATCH /openapi/v2/profiles/{profileId}/close
 
 | 名称                              | 类型    | 必填 | 说明                         |
 | --------------------------------- | ------- | ---- | ---------------------------- |
-| `skip_cookie_sync_after_close`    | boolean | 否   | 是否跳过关闭后 Cookie 同步。 |
-| `skip_data_sync_after_close`      | boolean | 否   | 是否跳过关闭后数据同步。     |
-| `skip_extension_sync_after_close` | boolean | 否   | 是否跳过关闭后扩展数据同步。 |
+| `skip_cookie_sync_after_close`    | boolean | 否   | 是否跳过停止后 Cookie 同步。 |
+| `skip_data_sync_after_close`      | boolean | 否   | 是否跳过停止后数据同步。     |
+| `skip_extension_sync_after_close` | boolean | 否   | 是否跳过停止后扩展数据同步。 |
 
 ### 请求示例
 
 ```bash
-curl -X PATCH "http://127.0.0.1:52100/openapi/v2/profiles/1876881021063852034/close" \
+curl -X POST "http://127.0.0.1:52100/openapi/v2/profiles/1876881021063852034/stop" \
   -H "X-API-KEY: your-local-api-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -713,6 +1043,668 @@ curl -X DELETE "http://127.0.0.1:52100/openapi/v2/profiles/1876881021063852034/s
     "types": ["local_storage", "indexed_db"]
   }'
 ```
+
+# 扩展与书签
+
+## 查询环境书签
+
+### 接口地址
+
+```http
+GET /openapi/v2/profiles/{profileId}/bookmarks
+```
+
+用于查询指定环境的书签内容和书签设置。
+
+### 路径参数
+
+| 名称        | 类型   | 必填 | 说明      |
+| ----------- | ------ | ---- | --------- |
+| `profileId` | string | 是   | 环境 ID。 |
+
+### 请求示例
+
+```bash
+curl -X GET "http://127.0.0.1:52100/openapi/v2/profiles/1876881021063852034/bookmarks" \
+  -H "X-API-KEY: your-local-api-key"
+```
+
+### 响应示例
+
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "profile_id": "1876881021063852034",
+    "content": {},
+    "settings": {}
+  },
+  "next": null
+}
+```
+
+## 覆盖环境书签
+
+### 接口地址
+
+```http
+PUT /openapi/v2/profiles/{profileId}/bookmarks
+```
+
+用于覆盖指定环境的书签内容和书签设置。该操作会以请求体中的内容为准，请谨慎使用。
+
+### 路径参数
+
+| 名称        | 类型   | 必填 | 说明      |
+| ----------- | ------ | ---- | --------- |
+| `profileId` | string | 是   | 环境 ID。 |
+
+### 请求参数
+
+| 名称       | 类型   | 必填 | 说明       |
+| ---------- | ------ | ---- | ---------- |
+| `content`  | object | 否   | 书签内容。 |
+| `settings` | object | 否   | 书签设置。 |
+
+### 请求示例
+
+```bash
+curl -X PUT "http://127.0.0.1:52100/openapi/v2/profiles/1876881021063852034/bookmarks" \
+  -H "X-API-KEY: your-local-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": {},
+    "settings": {}
+  }'
+```
+
+## 复制书签到环境
+
+### 接口地址
+
+```http
+POST /openapi/v2/profiles/{profileId}/bookmarks/copy
+```
+
+用于将来源环境的书签复制到目标环境。路径中的 `profileId` 为目标环境 ID。
+
+### 路径参数
+
+| 名称        | 类型   | 必填 | 说明          |
+| ----------- | ------ | ---- | ------------- |
+| `profileId` | string | 是   | 目标环境 ID。 |
+
+### 请求参数
+
+| 名称                | 类型    | 必填 | 说明                                |
+| ------------------- | ------- | ---- | ----------------------------------- |
+| `source_profile_id` | string  | 否   | 来源环境 ID。                       |
+| `include_settings`  | boolean | 否   | 是否同时复制书签设置，默认 `true`。 |
+
+### 请求示例
+
+```bash
+curl -X POST "http://127.0.0.1:52100/openapi/v2/profiles/1876881021063852034/bookmarks/copy" \
+  -H "X-API-KEY: your-local-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_profile_id": "1876881021063852999",
+    "include_settings": true
+  }'
+```
+
+## 更新环境扩展设置
+
+### 接口地址
+
+```http
+PATCH /openapi/v2/profiles/{profileId}/extensions
+```
+
+用于更新指定环境的扩展管理模式和扩展分组。
+
+### 路径参数
+
+| 名称        | 类型   | 必填 | 说明      |
+| ----------- | ------ | ---- | --------- |
+| `profileId` | string | 是   | 环境 ID。 |
+
+### 请求参数
+
+| 名称       | 类型   | 必填 | 说明                                  |
+| ---------- | ------ | ---- | ------------------------------------- |
+| `mode`     | string | 否   | 扩展模式。可选值：`allow`、`ban`。    |
+| `group_id` | string | 否   | 扩展分组 ID；传空表示不绑定扩展分组。 |
+
+### 请求示例
+
+```bash
+curl -X PATCH "http://127.0.0.1:52100/openapi/v2/profiles/1876881021063852034/extensions" \
+  -H "X-API-KEY: your-local-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "allow",
+    "group_id": "1876881021063852888"
+  }'
+```
+
+## 查询扩展列表
+
+### 接口地址
+
+```http
+GET /openapi/v2/extensions
+```
+
+用于查询团队扩展列表。
+
+### 查询参数
+
+| 名称      | 类型   | 必填 | 说明               |
+| --------- | ------ | ---- | ------------------ |
+| `request` | string | 是   | 扩展列表查询参数。 |
+
+### 响应参数
+
+`data.list` 为扩展列表：
+
+| 名称      | 类型     | 说明                                     |
+| --------- | -------- | ---------------------------------------- |
+| `id`      | string   | 扩展 ID。                                |
+| `name`    | string   | 扩展名称。                               |
+| `version` | string   | 扩展版本。                               |
+| `source`  | string   | 扩展来源：`local`、`google`、`dicloak`。 |
+| `groups`  | object[] | 扩展所属分组列表。                       |
+
+## 查询扩展分组列表
+
+### 接口地址
+
+```http
+GET /openapi/v2/extension-groups
+```
+
+用于查询扩展分组列表。
+
+### 查询参数
+
+| 名称      | 类型   | 必填 | 说明                   |
+| --------- | ------ | ---- | ---------------------- |
+| `request` | string | 是   | 扩展分组列表查询参数。 |
+
+### 响应参数
+
+`data.list` 为扩展分组列表：
+
+| 名称         | 类型   | 说明           |
+| ------------ | ------ | -------------- |
+| `id`         | string | 扩展分组 ID。  |
+| `name`       | string | 扩展分组名称。 |
+| `remark`     | string | 备注。         |
+| `created_at` | string | 创建时间。     |
+| `updated_at` | string | 更新时间。     |
+
+## 删除扩展
+
+### 接口地址
+
+```http
+DELETE /openapi/v2/extensions/{extensionId}
+```
+
+用于删除指定扩展。删除后使用该扩展的环境可能受到影响，请谨慎操作。
+
+### 路径参数
+
+| 名称          | 类型   | 必填 | 说明      |
+| ------------- | ------ | ---- | --------- |
+| `extensionId` | string | 是   | 扩展 ID。 |
+
+# 标签 Tags
+
+## 查询标签列表
+
+### 接口地址
+
+```http
+GET /openapi/v2/tags
+```
+
+用于查询标签列表。
+
+### 查询参数
+
+| 名称      | 类型   | 必填 | 说明               |
+| --------- | ------ | ---- | ------------------ |
+| `request` | string | 是   | 标签列表查询参数。 |
+
+### 响应参数
+
+`data.list` 为标签列表：
+
+| 名称    | 类型   | 说明                                                                                     |
+| ------- | ------ | ---------------------------------------------------------------------------------------- |
+| `id`    | string | 标签 ID。                                                                                |
+| `name`  | string | 标签名称。                                                                               |
+| `style` | string | 标签颜色：`gray`、`red`、`orange`、`yellow`、`green`、`teal`、`blue`、`purple`、`pink`。 |
+
+## 创建标签
+
+### 接口地址
+
+```http
+POST /openapi/v2/tags
+```
+
+用于创建标签。
+
+### 请求参数
+
+| 名称    | 类型   | 必填 | 说明                                                                                     |
+| ------- | ------ | ---- | ---------------------------------------------------------------------------------------- |
+| `name`  | string | 否   | 标签名称。                                                                               |
+| `style` | string | 否   | 标签颜色：`gray`、`red`、`orange`、`yellow`、`green`、`teal`、`blue`、`purple`、`pink`。 |
+
+### 请求示例
+
+```bash
+curl -X POST "http://127.0.0.1:52100/openapi/v2/tags" \
+  -H "X-API-KEY: your-local-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "automation",
+    "style": "blue"
+  }'
+```
+
+## 给环境添加标签
+
+### 接口地址
+
+```http
+POST /openapi/v2/tags/{tagId}/profiles
+```
+
+用于给一个或多个环境添加指定标签。
+
+### 路径参数
+
+| 名称    | 类型   | 必填 | 说明      |
+| ------- | ------ | ---- | --------- |
+| `tagId` | string | 是   | 标签 ID。 |
+
+### 请求参数
+
+| 名称          | 类型     | 必填 | 说明           |
+| ------------- | -------- | ---- | -------------- |
+| `profile_ids` | string[] | 否   | 环境 ID 列表。 |
+
+### 请求示例
+
+```bash
+curl -X POST "http://127.0.0.1:52100/openapi/v2/tags/1876881021063852888/profiles" \
+  -H "X-API-KEY: your-local-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "profile_ids": ["1876881021063852034"]
+  }'
+```
+
+## 从环境移除标签
+
+### 接口地址
+
+```http
+DELETE /openapi/v2/tags/{tagId}/profiles
+```
+
+用于从一个或多个环境中移除指定标签。
+
+### 路径参数
+
+| 名称    | 类型   | 必填 | 说明      |
+| ------- | ------ | ---- | --------- |
+| `tagId` | string | 是   | 标签 ID。 |
+
+### 请求参数
+
+| 名称          | 类型     | 必填 | 说明           |
+| ------------- | -------- | ---- | -------------- |
+| `profile_ids` | string[] | 否   | 环境 ID 列表。 |
+
+## 修改标签
+
+### 接口地址
+
+```http
+PATCH /openapi/v2/tags/{tagId}
+```
+
+用于修改标签名称或颜色。
+
+### 路径参数
+
+| 名称    | 类型   | 必填 | 说明      |
+| ------- | ------ | ---- | --------- |
+| `tagId` | string | 是   | 标签 ID。 |
+
+### 请求参数
+
+| 名称    | 类型   | 必填 | 说明                                                                                     |
+| ------- | ------ | ---- | ---------------------------------------------------------------------------------------- |
+| `name`  | string | 否   | 标签名称。                                                                               |
+| `style` | string | 否   | 标签颜色：`gray`、`red`、`orange`、`yellow`、`green`、`teal`、`blue`、`purple`、`pink`。 |
+
+## 删除标签
+
+### 接口地址
+
+```http
+DELETE /openapi/v2/tags/{tagId}
+```
+
+用于删除标签。
+
+### 路径参数
+
+| 名称    | 类型   | 必填 | 说明      |
+| ------- | ------ | ---- | --------- |
+| `tagId` | string | 是   | 标签 ID。 |
+
+# 环境分组
+
+## 查询环境分组列表
+
+### 接口地址
+
+```http
+GET /openapi/v2/profile-groups
+```
+
+用于查询环境分组列表。
+
+### 查询参数
+
+| 名称      | 类型   | 必填 | 说明                   |
+| --------- | ------ | ---- | ---------------------- |
+| `request` | string | 是   | 环境分组列表查询参数。 |
+
+### 响应参数
+
+`data.list` 为环境分组列表：
+
+| 名称     | 类型   | 说明       |
+| -------- | ------ | ---------- |
+| `id`     | string | 分组 ID。  |
+| `name`   | string | 分组名称。 |
+| `remark` | string | 备注。     |
+
+## 创建环境分组
+
+### 接口地址
+
+```http
+POST /openapi/v2/profile-groups
+```
+
+用于创建环境分组。
+
+### 请求参数
+
+| 名称     | 类型   | 必填 | 说明       |
+| -------- | ------ | ---- | ---------- |
+| `name`   | string | 否   | 分组名称。 |
+| `remark` | string | 否   | 备注。     |
+
+### 请求示例
+
+```bash
+curl -X POST "http://127.0.0.1:52100/openapi/v2/profile-groups" \
+  -H "X-API-KEY: your-local-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "automation group",
+    "remark": "created by Local API V2"
+  }'
+```
+
+## 获取环境分组详情
+
+### 接口地址
+
+```http
+GET /openapi/v2/profile-groups/{groupId}
+```
+
+用于获取环境分组详情。
+
+### 路径参数
+
+| 名称      | 类型   | 必填 | 说明      |
+| --------- | ------ | ---- | --------- |
+| `groupId` | string | 是   | 分组 ID。 |
+
+## 修改环境分组
+
+### 接口地址
+
+```http
+PATCH /openapi/v2/profile-groups/{groupId}
+```
+
+用于修改环境分组。
+
+### 路径参数
+
+| 名称      | 类型   | 必填 | 说明      |
+| --------- | ------ | ---- | --------- |
+| `groupId` | string | 是   | 分组 ID。 |
+
+### 请求参数
+
+| 名称     | 类型   | 必填 | 说明       |
+| -------- | ------ | ---- | ---------- |
+| `name`   | string | 否   | 分组名称。 |
+| `remark` | string | 否   | 备注。     |
+
+## 删除环境分组
+
+### 接口地址
+
+```http
+DELETE /openapi/v2/profile-groups/{groupId}
+```
+
+用于删除环境分组。删除前请确认该分组不再需要继续使用。
+
+### 路径参数
+
+| 名称      | 类型   | 必填 | 说明      |
+| --------- | ------ | ---- | --------- |
+| `groupId` | string | 是   | 分组 ID。 |
+
+# 成员与权限
+
+## 查询成员列表
+
+### 接口地址
+
+```http
+GET /openapi/v2/members
+```
+
+用于查询团队成员列表。
+
+### 查询参数
+
+| 名称      | 类型   | 必填 | 说明               |
+| --------- | ------ | ---- | ------------------ |
+| `request` | string | 是   | 成员列表查询参数。 |
+
+### 响应参数
+
+`data.list` 为成员列表，成员字段见 [成员字段](#成员字段)。
+
+## 创建成员
+
+### 接口地址
+
+```http
+POST /openapi/v2/members
+```
+
+用于创建团队成员。
+
+### 请求参数
+
+请求体字段见 [成员创建和更新参数](#成员创建和更新参数)。
+
+### 请求示例
+
+```bash
+curl -X POST "http://127.0.0.1:52100/openapi/v2/members" \
+  -H "X-API-KEY: your-local-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "automation member",
+    "account": "automation@example.com",
+    "authority": "staff",
+    "status": "enabled",
+    "all_profile_groups": false,
+    "profile_group_ids": [],
+    "type": "internal",
+    "password": "password"
+  }'
+```
+
+## 获取成员详情
+
+### 接口地址
+
+```http
+GET /openapi/v2/members/{memberId}
+```
+
+用于获取成员详情。
+
+### 路径参数
+
+| 名称       | 类型   | 必填 | 说明      |
+| ---------- | ------ | ---- | --------- |
+| `memberId` | string | 是   | 成员 ID。 |
+
+## 修改成员
+
+### 接口地址
+
+```http
+PATCH /openapi/v2/members/{memberId}
+```
+
+用于修改成员信息。
+
+### 路径参数
+
+| 名称       | 类型   | 必填 | 说明      |
+| ---------- | ------ | ---- | --------- |
+| `memberId` | string | 是   | 成员 ID。 |
+
+### 请求参数
+
+请求体字段见 [成员创建和更新参数](#成员创建和更新参数)。未传入的字段保持不变。
+
+## 删除成员
+
+### 接口地址
+
+```http
+DELETE /openapi/v2/members/{memberId}
+```
+
+用于删除成员。删除前请确认该成员不再需要继续访问当前团队。
+
+### 路径参数
+
+| 名称       | 类型   | 必填 | 说明      |
+| ---------- | ------ | ---- | --------- |
+| `memberId` | string | 是   | 成员 ID。 |
+
+## 修改成员可访问环境分组
+
+### 接口地址
+
+```http
+PATCH /openapi/v2/members/{memberId}/profile-groups
+```
+
+用于修改成员可以访问的环境分组。
+
+### 路径参数
+
+| 名称       | 类型   | 必填 | 说明      |
+| ---------- | ------ | ---- | --------- |
+| `memberId` | string | 是   | 成员 ID。 |
+
+### 请求参数
+
+| 名称                 | 类型     | 必填 | 说明                       |
+| -------------------- | -------- | ---- | -------------------------- |
+| `all_profile_groups` | boolean  | 否   | 是否拥有全部环境分组。     |
+| `profile_group_ids`  | string[] | 否   | 可访问的环境分组 ID 列表。 |
+
+## 查询角色列表
+
+### 接口地址
+
+```http
+GET /openapi/v2/roles
+```
+
+用于查询当前团队可用角色列表。
+
+### 查询参数
+
+| 名称      | 类型   | 必填 | 说明               |
+| --------- | ------ | ---- | ------------------ |
+| `request` | string | 是   | 角色列表查询参数。 |
+
+### 响应参数
+
+`data.list` 为角色列表：
+
+| 名称     | 类型   | 说明                              |
+| -------- | ------ | --------------------------------- |
+| `id`     | string | 角色 ID。                         |
+| `name`   | string | 角色名称。                        |
+| `status` | string | 角色状态：`enabled`、`disabled`。 |
+| `remark` | string | 备注。                            |
+
+## 查询当前成员权限列表
+
+### 接口地址
+
+```http
+GET /openapi/v2/permissions
+```
+
+用于查询当前 API 密钥对应成员的权限列表。
+
+### 查询参数
+
+| 名称      | 类型   | 必填 | 说明               |
+| --------- | ------ | ---- | ------------------ |
+| `request` | string | 是   | 权限列表查询参数。 |
+
+### 响应参数
+
+`data.list` 为权限列表：
+
+| 名称   | 类型   | 说明       |
+| ------ | ------ | ---------- |
+| `id`   | string | 权限 ID。  |
+| `code` | string | 权限编码。 |
+| `name` | string | 权限名称。 |
 
 # 代理 Proxies
 
@@ -1529,6 +2521,53 @@ GET /openapi/v2/fingerprints/options
 | `fingerprint` | object   | 指纹配置。     |
 | `advanced`    | object   | 高级配置。     |
 
+## 成员创建和更新参数
+
+| 名称                 | 类型     | 必填 | 说明                                                                |
+| -------------------- | -------- | ---- | ------------------------------------------------------------------- |
+| `name`               | string   | 否   | 成员名称。                                                          |
+| `account`            | string   | 否   | 成员账号。                                                          |
+| `phone`              | string   | 否   | 手机号。                                                            |
+| `authority`          | string   | 否   | 成员权限：`admin`、`manager`、`staff`。不允许创建或修改为 `owner`。 |
+| `status`             | string   | 否   | 成员状态：`enabled`、`disabled`。                                   |
+| `role_id`            | string   | 否   | 角色 ID。不允许分配超管角色组。                                     |
+| `all_profile_groups` | boolean  | 否   | 是否拥有全部环境分组。                                              |
+| `profile_group_ids`  | string[] | 否   | 可访问的环境分组 ID 列表。`all_profile_groups=false` 时生效。       |
+| `manager_id`         | string   | 否   | 上级经理成员 ID。                                                   |
+| `type`               | string   | 否   | 成员类型：`external`、`internal`。                                  |
+| `password`           | string   | 否   | 成员密码。                                                          |
+| `remark`             | string   | 否   | 备注。                                                              |
+| `expiry`             | object   | 否   | 到期停用配置，见 [成员到期配置](#成员到期配置)。                    |
+
+## 成员到期配置
+
+| 名称       | 类型    | 必填 | 说明                                          |
+| ---------- | ------- | ---- | --------------------------------------------- |
+| `enabled`  | boolean | 否   | 是否启用到期停用。                            |
+| `timezone` | string  | 否   | 成员时区，例如 `Asia/Shanghai`。              |
+| `time`     | string  | 否   | 到期时间，格式为 `yyyy-MM-dd HH:mm:ss`。      |
+| `mode`     | string  | 否   | 到期模式：`instant`、`login_start`。          |
+| `days`     | integer | 否   | 登录后多少天到期。`mode=login_start` 时生效。 |
+
+## 成员字段
+
+| 名称                 | 类型     | 说明                                             |
+| -------------------- | -------- | ------------------------------------------------ |
+| `id`                 | string   | 成员 ID。                                        |
+| `name`               | string   | 成员名称。                                       |
+| `account`            | string   | 成员账号。                                       |
+| `authority`          | string   | 成员权限：`owner`、`admin`、`manager`、`staff`。 |
+| `status`             | string   | 成员状态：`enabled`、`disabled`。                |
+| `role_id`            | string   | 角色 ID。                                        |
+| `role_name`          | string   | 角色名称。                                       |
+| `all_profile_groups` | boolean  | 是否拥有全部环境分组。                           |
+| `profile_group_ids`  | string[] | 可访问的环境分组 ID 列表。                       |
+| `profile_groups`     | object[] | 可访问的环境分组简要信息。                       |
+| `type`               | string   | 成员类型：`external`、`internal`。               |
+| `remark`             | string   | 备注。                                           |
+| `created_at`         | string   | 创建时间。                                       |
+| `updated_at`         | string   | 更新时间。                                       |
+
 ## 代理响应字段
 
 | 名称             | 类型    | 说明                                                         |
@@ -1571,7 +2610,7 @@ GET /openapi/v2/fingerprints/options
 
 # 常见调用顺序
 
-## 创建并打开一个环境
+## 创建并启动一个环境
 
 1. 创建环境：
 
@@ -1581,18 +2620,18 @@ POST /openapi/v2/profiles
 
 2. 从响应 `data.id` 取得环境 ID。
 
-3. 打开环境：
+3. 启动环境：
 
 ```http
-PATCH /openapi/v2/profiles/{profileId}/open
+POST /openapi/v2/profiles/{profileId}/start
 ```
 
 4. 使用响应中的 `debug_port` 或 `web_socket_url` 连接浏览器调试协议。
 
-5. 关闭环境：
+5. 停止环境：
 
 ```http
-PATCH /openapi/v2/profiles/{profileId}/close
+POST /openapi/v2/profiles/{profileId}/stop
 ```
 
 ## 给环境绑定已有代理
@@ -1628,5 +2667,5 @@ PATCH /openapi/v2/profiles/{profileId}/proxy-binding
 - 所有请求都需要携带正确的 `X-API-KEY`。
 - 有请求体的接口请使用 JSON 格式，并设置 `Content-Type: application/json`。
 - 创建、更新、导入类接口建议先使用少量数据验证，再批量调用。
-- 打开环境成功后，可以使用响应中的 `debug_port` 或 `web_socket_url` 连接浏览器。
+- 启动环境成功后，可以使用响应中的 `debug_port` 或 `web_socket_url` 连接浏览器。
 - 遇到 429 时请降低请求频率，并参考响应头中的 `Retry-After`、`X-RateLimit-*`。
