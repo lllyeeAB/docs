@@ -196,7 +196,7 @@ GET /openapi/v2/capabilities
     "tags": true,
     "profile_groups": true,
     "members": true,
-    "roles": true,
+    "member_groups": true,
     "permissions": true,
     "start_stop": true,
     "stop_all": true,
@@ -728,12 +728,12 @@ POST /openapi/v2/profiles/{profileId}/clone
 
 ### 请求参数
 
-| 名称            | 类型     | 必填 | 说明                                                       |
-| --------------- | -------- | ---- | ---------------------------------------------------------- |
-| `copies`        | integer  | 否   | 克隆份数，表示要复制出几个新环境。                         |
-| `group_ids`     | string[] | 否   | 目标分组 ID 列表。留空则沿用原环境分组。                   |
-| `inherit_items` | string[] | 否   | 需要继承的数据项。留空默认继承指纹、代理、账号和云端数据。 |
-| `remark`        | string   | 否   | 克隆备注。留空则沿用原环境备注。                           |
+| 名称            | 类型     | 必填 | 说明                                                                                                               |
+| --------------- | -------- | ---- | ------------------------------------------------------------------------------------------------------------------ |
+| `copies`        | integer  | 否   | 克隆份数，表示要复制出几个新环境。                                                                                 |
+| `group_ids`     | string[] | 否   | 目标分组 ID 列表。留空则沿用原环境分组。                                                                           |
+| `inherit_items` | string[] | 否   | 需要继承的数据项。可选值：`fingerprint_and_proxy`、`account`、`cloud_data`。留空默认继承指纹代理、账号和云端数据。 |
+| `remark`        | string   | 否   | 克隆备注。留空则沿用原环境备注。                                                                                   |
 
 ### 请求示例
 
@@ -744,7 +744,7 @@ curl -X POST "http://127.0.0.1:52100/openapi/v2/profiles/1876881021063852034/clo
   -d '{
     "copies": 1,
     "group_ids": [],
-    "inherit_items": ["fingerprint", "proxy", "account"],
+    "inherit_items": ["fingerprint_and_proxy", "account", "cloud_data"],
     "remark": "clone by Local API V2"
   }'
 ```
@@ -1217,6 +1217,69 @@ GET /openapi/v2/extensions
 | `source`  | string   | 扩展来源：`local`、`google`、`dicloak`。 |
 | `groups`  | object[] | 扩展所属分组列表。                       |
 
+## 通过 Chrome Web Store 链接添加扩展
+
+### 接口地址
+
+```http
+POST /openapi/v2/extensions
+```
+
+用于通过 Chrome Web Store 扩展详情页链接，将扩展添加到当前团队。添加成功后，可在扩展列表中查询，并可通过扩展分组绑定到环境。
+
+当前仅支持 Chrome Web Store 详情页链接，不支持本地扩展包上传。
+
+### 请求参数
+
+| 名称                  | 类型     | 必填 | 说明                                                                               |
+| --------------------- | -------- | ---- | ---------------------------------------------------------------------------------- |
+| `url`                 | string   | 是   | Chrome Web Store 扩展详情页链接。                                                  |
+| `extension_group_ids` | string[] | 否   | 扩展分组 ID 列表；不传时自动使用默认扩展分组。                                     |
+| `status`              | string   | 否   | 添加后的扩展状态。可选值：`ENABLED`、`DISABLED`；默认 `DISABLED`。                 |
+| `pin_type`            | string   | 否   | 扩展图标固定方式。可选值：`CUSTOMIZE_PIN`、`PIN`、`UN_PIN`；默认 `CUSTOMIZE_PIN`。 |
+| `browser_hide`        | boolean  | 否   | 是否在浏览器中隐藏扩展图标，默认 `false`。                                         |
+| `hide_role_id`        | string[] | 否   | 隐藏扩展图标的角色 ID 列表；不传时默认 `["all"]`。                                 |
+
+### 请求示例
+
+```bash
+curl -X POST "http://127.0.0.1:52100/openapi/v2/extensions" \
+  -H "X-API-KEY: your-local-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://chromewebstore.google.com/detail/simpleundoclose/plmkckmepaemlbdcihcfiffecmmnofil",
+    "status": "DISABLED"
+  }'
+```
+
+### 响应参数
+
+`data` 为添加后的扩展信息：
+
+| 名称                    | 类型     | 说明                                |
+| ----------------------- | -------- | ----------------------------------- |
+| `id`                    | string   | 扩展记录 ID。                       |
+| `browser_extensions_id` | string   | 扩展基础记录 ID 或扩展标识。        |
+| `unique_id`             | string   | Chrome Web Store 扩展 ID。          |
+| `extensions_name`       | string   | 扩展名称。                          |
+| `extensions_introduce`  | string   | 扩展说明。                          |
+| `download_url`          | string   | 扩展安装包地址。                    |
+| `icon_url`              | string   | 扩展图标地址。                      |
+| `md5_hash`              | string   | 扩展包 MD5。                        |
+| `sha256_hash`           | string   | 扩展包 SHA256；未返回时为空字符串。 |
+| `source`                | string   | 扩展来源，固定为 `GOOGLE`。         |
+| `status`                | string   | 扩展状态：`ENABLED`、`DISABLED`。   |
+| `version`               | string   | 扩展版本。                          |
+| `original_url`          | string   | 原始 Chrome Web Store 链接。        |
+| `pin_type`              | string   | 扩展图标固定方式。                  |
+| `browser_hide`          | boolean  | 是否隐藏扩展图标。                  |
+| `hide_role_id`          | string[] | 隐藏扩展图标的角色 ID 列表。        |
+| `extension_group_ids`   | string[] | 扩展所属分组 ID 列表。              |
+| `already_exists`        | boolean  | 团队中是否已存在该扩展。            |
+| `downloaded`            | boolean  | 本次请求是否执行了扩展包下载。      |
+
+如果团队中已存在该扩展，接口会返回已有扩展信息，并将 `already_exists` 返回为 `true`。
+
 ## 查询扩展分组列表
 
 ### 接口地址
@@ -1653,15 +1716,15 @@ PATCH /openapi/v2/members/{memberId}/profile-groups
 | `all_profile_groups` | boolean  | 否   | 是否拥有全部环境分组。     |
 | `profile_group_ids`  | string[] | 否   | 可访问的环境分组 ID 列表。 |
 
-## 查询角色列表
+## 查询成员分组列表
 
 ### 接口地址
 
 ```http
-GET /openapi/v2/roles
+GET /openapi/v2/member-groups
 ```
 
-用于查询当前团队可用角色列表。
+用于查询当前团队可用成员分组列表。
 
 ### 查询参数
 
@@ -1671,12 +1734,12 @@ GET /openapi/v2/roles
 
 ### 响应参数
 
-`data.list` 为角色列表：
+`data.list` 为成员分组列表：
 
 | 名称     | 类型   | 说明                              |
 | -------- | ------ | --------------------------------- |
-| `id`     | string | 角色 ID。                         |
-| `name`   | string | 角色名称。                        |
+| `id`     | string | 成员分组 ID。                     |
+| `name`   | string | 成员分组名称。                    |
 | `status` | string | 角色状态：`enabled`、`disabled`。 |
 | `remark` | string | 备注。                            |
 
