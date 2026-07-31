@@ -93,16 +93,16 @@ V2 使用统一响应包络：
 
 ## 接口范围
 
-当前支持 71 个 V2 接口：
+当前支持 72 个 V2 接口：
 
 | 模块              | 数量 | 说明                                                           |
 | ----------------- | ---: | -------------------------------------------------------------- |
 | 运行状态 Runtime  |    9 | 服务状态、版本、健康状态、频控、运行环境、批量停止和可用内核。 |
 | 环境 Profiles     |   19 | 环境增删改查、账号、分组移动、代理绑定、启动/停止等。          |
-| 扩展与书签        |    7 | 环境书签、环境扩展设置、扩展列表和扩展分组。                   |
+| 扩展与书签        |    8 | 环境书签、环境扩展设置、扩展安装、扩展列表和扩展分组。         |
 | 标签 Tags         |    6 | 标签增删改查，以及给环境添加或移除标签。                       |
 | 环境分组          |    5 | 环境分组增删改查。                                             |
-| 成员与权限        |    8 | 成员增删改查、成员可访问分组、角色和权限查询。                 |
+| 成员与权限        |    8 | 成员增删改查、成员可访问分组、成员分组和权限查询。             |
 | 代理 Proxies      |    7 | 代理增删改查和代理检测。                                       |
 | Cookie            |    4 | Cookie 查询、导入和清空。                                      |
 | 指纹 Fingerprints |    6 | 指纹查询、覆盖、刷新、生成和选项查询。                         |
@@ -520,12 +520,11 @@ curl -X POST "http://127.0.0.1:52100/openapi/v2/profiles" \
     "advanced": {
       "startup": {
         "urls": [],
-        "fixed_urls": [],
         "restore_session_mode": "global"
       },
       "multi_open": "global",
       "remote_inspector": "global",
-      "spoofing_video": "default"
+      "spoofing_video": "disabled"
     },
     "cookies": [],
     "account_list": [],
@@ -730,7 +729,7 @@ POST /openapi/v2/profiles/{profileId}/clone
 
 | 名称            | 类型     | 必填 | 说明                                                                                                               |
 | --------------- | -------- | ---- | ------------------------------------------------------------------------------------------------------------------ |
-| `copies`        | integer  | 否   | 克隆份数，表示要复制出几个新环境。                                                                                 |
+| `copies`        | integer  | 否   | 克隆份数，表示要复制出几个新环境，取值范围 `1-100`。                                                               |
 | `group_ids`     | string[] | 否   | 目标分组 ID 列表。留空则沿用原环境分组。                                                                           |
 | `inherit_items` | string[] | 否   | 需要继承的数据项。可选值：`fingerprint_and_proxy`、`account`、`cloud_data`。留空默认继承指纹代理、账号和云端数据。 |
 | `remark`        | string   | 否   | 克隆备注。留空则沿用原环境备注。                                                                                   |
@@ -1927,11 +1926,13 @@ POST /openapi/v2/proxies/check
 }
 ```
 
+`data.status` 可选值为 `wait`、`success`、`fail`。
+
 # Cookie
 
 说明：
 
-- Cookie 接口当前支持普通 Cookie 读写场景。若环境启用了受保护 Cookie 加密，本版本暂不支持通过 Local API 查询、导入或清空该环境 Cookie。
+- Cookie 接口支持普通 Cookie 读写场景。启用受保护 Cookie 加密的环境不支持通过 Local API 查询、导入或清空 Cookie。
 - 查询返回的 Cookie 使用标准 `value` 字段；导入 Cookie 时也请传入 `value` 字段。
 
 ## 查询环境 Cookie
@@ -1955,6 +1956,17 @@ GET /openapi/v2/profiles/{profileId}/cookies
 | 名称     | 类型   | 必填 | 说明                                       |
 | -------- | ------ | ---- | ------------------------------------------ |
 | `domain` | string | 否   | 按 Cookie 域名过滤。不传表示返回全部域名。 |
+
+### 响应参数
+
+`data` 为 Cookie 查询结果：
+
+| 名称                    | 类型     | 说明                                              |
+| ----------------------- | -------- | ------------------------------------------------- |
+| `profile_id`            | string   | 环境 ID。                                         |
+| `cookies`               | object[] | Cookie 列表，字段见 [Cookie 参数](#cookie-参数)。 |
+| `cookie_convert_state`  | boolean  | Cookie 是否转换成功。                             |
+| `cookie_encrypt_status` | string   | Cookie 加密状态：`OLD_ENCRYPT`、`NEW_ENCRYPT`。   |
 
 ## 覆盖导入环境 Cookie
 
@@ -2010,10 +2022,10 @@ curl -X POST "http://127.0.0.1:52100/openapi/v2/profiles/1876881021063852034/coo
         "path": "/",
         "name": "session",
         "value": "cookie-value",
-        "expirationDate": 1893456000,
-        "httpOnly": true,
+        "expiration_date": 1893456000,
+        "http_only": true,
         "secure": true,
-        "sameSite": "lax"
+        "same_site": "lax"
       }
     ]
   }'
@@ -2245,7 +2257,7 @@ GET /openapi/v2/fingerprints/options
 | ---------------- | ------ | --------------------------------------------------------------------------- |
 | `os`             | string | 系统类型。可选值：`random`、`windows`、`macos`、`linux`、`android`、`ios`。 |
 | `kernel_version` | string | 浏览器内核版本。可选值：`120`、`134`、`142`、`143`、`147`。                 |
-| `ua`             | string | User Agent。留空时系统随机生成。                                            |
+| `ua`             | string | User Agent。留空时系统随机生成；填写时需与系统类型和内核版本保持一致。      |
 | `language`       | object | 浏览器语言配置。                                                            |
 | `ui_language`    | object | 界面语言配置。                                                              |
 | `timezone`       | object | 时区配置。                                                                  |
@@ -2296,10 +2308,10 @@ GET /openapi/v2/fingerprints/options
 
 ### `fonts`
 
-| 名称     | 类型     | 说明                                                     |
-| -------- | -------- | -------------------------------------------------------- |
-| `mode`   | string   | 字体模式。可选值：`real`、`mask`、`custom`、`disabled`。 |
-| `values` | string[] | 字体列表。仅 `mode=custom` 时生效。                      |
+| 名称     | 类型     | 说明                                           |
+| -------- | -------- | ---------------------------------------------- |
+| `mode`   | string   | 字体模式。可选值：`real`、`random`、`custom`。 |
+| `values` | string[] | 字体列表。仅 `mode=custom` 时生效。            |
 
 ### `webrtc`
 
@@ -2323,40 +2335,46 @@ GET /openapi/v2/fingerprints/options
 
 ### `webgl`
 
-| 名称            | 类型   | 说明                                                             |
-| --------------- | ------ | ---------------------------------------------------------------- |
-| `image_mode`    | string | WebGL 图像模式。可选值：`real`、`mask`、`custom`、`disabled`。   |
-| `metadata_mode` | string | WebGL 元数据模式。可选值：`real`、`mask`、`custom`、`disabled`。 |
-| `manufacturer`  | string | WebGL 厂商。仅 `metadata_mode=custom` 时生效。                   |
-| `renderer`      | string | WebGL 渲染器。仅 `metadata_mode=custom` 时生效。                 |
+| 名称            | 类型   | 说明                                                   |
+| --------------- | ------ | ------------------------------------------------------ |
+| `image_mode`    | string | WebGL 图像模式。可选值：`real`、`mask`。               |
+| `metadata_mode` | string | WebGL 元数据模式。可选值：`real`、`random`、`custom`。 |
+| `manufacturer`  | string | WebGL 厂商。仅 `metadata_mode=custom` 时生效。         |
+| `renderer`      | string | WebGL 渲染器。仅 `metadata_mode=custom` 时生效。       |
 
-### 通用指纹模块
+### `webgpu`
 
-`webgpu`、`audio_context`、`client_rects`、`speech_voices`、`media_devices` 使用同一结构：
+| 名称   | 类型   | 说明                                              |
+| ------ | ------ | ------------------------------------------------- |
+| `mode` | string | WebGPU 模式。可选值：`real`、`mask`、`disabled`。 |
 
-| 名称   | 类型   | 说明                                                     |
-| ------ | ------ | -------------------------------------------------------- |
-| `mode` | string | 模块模式。可选值：`real`、`mask`、`custom`、`disabled`。 |
+### 噪声指纹模块
+
+`audio_context`、`client_rects`、`speech_voices`、`media_devices` 使用同一结构：
+
+| 名称   | 类型   | 说明                               |
+| ------ | ------ | ---------------------------------- |
+| `mode` | string | 模块模式。可选值：`real`、`mask`。 |
 
 ### `hardware`
 
-| 名称               | 类型   | 说明                                                         |
-| ------------------ | ------ | ------------------------------------------------------------ |
-| `cpu_cores.mode`   | string | CPU 核心数取值模式。可选值：`random`、`custom`、`real`。     |
-| `cpu_cores.value`  | string | 自定义 CPU 核心数。仅 `mode=custom` 时生效。                 |
-| `memory_gb.mode`   | string | 内存取值模式。可选值：`random`、`custom`、`real`。           |
-| `memory_gb.value`  | string | 自定义内存 GB。仅 `mode=custom` 时生效。                     |
-| `device_name_mode` | string | 设备名模式。可选值：`real`、`mask`、`custom`、`disabled`。   |
-| `device_name`      | string | 设备名。仅 `device_name_mode=custom` 时生效。                |
-| `mac_address_mode` | string | MAC 地址模式。可选值：`real`、`mask`、`custom`、`disabled`。 |
-| `mac_address`      | string | MAC 地址。仅 `mac_address_mode=custom` 时生效。              |
+| 名称               | 类型   | 说明                                                     |
+| ------------------ | ------ | -------------------------------------------------------- |
+| `cpu_cores.mode`   | string | CPU 核心数取值模式。可选值：`random`、`custom`、`real`。 |
+| `cpu_cores.value`  | string | 自定义 CPU 核心数。仅 `mode=custom` 时生效。             |
+| `memory_gb.mode`   | string | 内存取值模式。可选值：`random`、`custom`、`real`。       |
+| `memory_gb.value`  | string | 自定义内存 GB。仅 `mode=custom` 时生效。                 |
+| `device_name_mode` | string | 设备名模式。可选值：`real`、`random`、`custom`。         |
+| `device_name`      | string | 设备名。仅 `device_name_mode=custom` 时生效。            |
+| `mac_address_mode` | string | MAC 地址模式。可选值：`real`、`random`、`custom`。       |
+| `mac_address`      | string | MAC 地址。仅 `mac_address_mode=custom` 时生效。          |
 
 ### `privacy`
 
 | 名称                           | 类型    | 说明                                                     |
 | ------------------------------ | ------- | -------------------------------------------------------- |
 | `do_not_track_mode`            | string  | Do Not Track。可选值：`default`、`enabled`、`disabled`。 |
-| `battery_mode`                 | string  | 电池模式。可选值：`real`、`mask`、`custom`、`disabled`。 |
+| `battery_mode`                 | string  | 电池模式。可选值：`real`、`mask`、`disabled`。           |
 | `port_scan_protection_enabled` | boolean | 是否开启端口扫描保护。                                   |
 | `hardware_acceleration_mode`   | string  | 硬件加速。可选值：`default`、`enabled`、`disabled`。     |
 
@@ -2370,25 +2388,24 @@ GET /openapi/v2/fingerprints/options
 
 `advanced` 用于配置启动、浏览器行为、同步、缓存、书签、访问限制和扩展。
 
-| 名称               | 类型   | 说明                                                     |
-| ------------------ | ------ | -------------------------------------------------------- |
-| `startup`          | object | 启动配置。                                               |
-| `browser_settings` | object | 浏览器设置。                                             |
-| `data_sync`        | object | 环境数据同步设置。                                       |
-| `local_cache`      | object | 本地缓存清理设置。                                       |
-| `bookmarks`        | object | 书签设置。                                               |
-| `access_limit`     | object | 访问限制设置。                                           |
-| `extensions`       | object | 扩展设置。                                               |
-| `multi_open`       | string | 多开模式。可选值：`global`、`allow`、`ban`。             |
-| `remote_inspector` | string | 远程调试模式。可选值：`global`、`allow`、`ban`。         |
-| `spoofing_video`   | string | 视频伪装模式。可选值：`default`、`enabled`、`disabled`。 |
+| 名称               | 类型   | 说明                                             |
+| ------------------ | ------ | ------------------------------------------------ |
+| `startup`          | object | 启动配置。                                       |
+| `browser_settings` | object | 浏览器设置。                                     |
+| `data_sync`        | object | 环境数据同步设置。                               |
+| `local_cache`      | object | 本地缓存清理设置。                               |
+| `bookmarks`        | object | 书签设置。                                       |
+| `access_limit`     | object | 访问限制设置。                                   |
+| `extensions`       | object | 扩展设置。                                       |
+| `multi_open`       | string | 多开模式。可选值：`global`、`allow`、`ban`。     |
+| `remote_inspector` | string | 远程调试模式。可选值：`global`、`allow`、`ban`。 |
+| `spoofing_video`   | string | 视频替换模式。可选值：`enabled`、`disabled`。    |
 
 ### `startup`
 
 | 名称                   | 类型     | 说明                                                       |
 | ---------------------- | -------- | ---------------------------------------------------------- |
 | `urls`                 | string[] | 启动时打开的网址列表。                                     |
-| `fixed_urls`           | string[] | 固定网址列表。                                             |
 | `restore_session_mode` | string   | 恢复会话模式。可选值：`global`、`restore`、`not_restore`。 |
 
 ### `browser_settings`
@@ -2466,14 +2483,18 @@ GET /openapi/v2/fingerprints/options
 
 ## 账号参数
 
-| 名称       | 类型   | 必填 | 说明                                                                                                                                                                                 |
-| ---------- | ------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `platform` | string | 否   | 账号平台。常用值：`other`、`facebook.com`、`amazon.com`、`linkedin.com`、`x.com`、`paypal.com`、`accounts.google.com`、`youtube.com`、`ebay.com`、`tiktok.com`、`instagram.com` 等。 |
-| `username` | string | 否   | 登录账号。                                                                                                                                                                           |
-| `password` | string | 否   | 登录密码。                                                                                                                                                                           |
-| `secret`   | string | 否   | 2FA 密钥或账号密钥。                                                                                                                                                                 |
-| `url`      | string | 否   | 自定义网站 URL。`platform=other` 时必填，且必须以 `http://` 或 `https://` 开头。                                                                                                     |
-| `remark`   | string | 否   | 账号备注。                                                                                                                                                                           |
+| 名称       | 类型   | 必填 | 说明                                                                                                   |
+| ---------- | ------ | ---- | ------------------------------------------------------------------------------------------------------ |
+| `platform` | string | 是   | 账号平台，使用下方列出的值。                                                                           |
+| `username` | string | 否   | 登录账号。                                                                                             |
+| `password` | string | 否   | 登录密码。                                                                                             |
+| `secret`   | string | 否   | 2FA 密钥或账号密钥。                                                                                   |
+| `url`      | string | 否   | 自定义网站 URL。`platform=other` 时必填，且必须以 `http://` 或 `https://` 开头。内置平台会忽略该字段。 |
+| `remark`   | string | 否   | 账号备注。                                                                                             |
+
+`platform` 可选值：
+
+`other`、`facebook.com`、`amazon.com`、`linkedin.com`、`x.com`、`paypal.com`、`accounts.google.com`、`vinted.fr`、`discord.com`、`aliexpress.com`、`youtube.com`、`ebay.com`、`mail.com`、`stripe.com`、`payoneer.com`、`lazada.com`、`shopify.com`、`shoplineapp.com`、`walmart.com`、`wish.com`、`shopee.com`、`etsy.com`、`dhgate.com`、`alibaba.com`、`tiktok.com`、`instagram.com`、`whatsapp.com`。
 
 ## Cookie 参数
 
@@ -2486,22 +2507,23 @@ GET /openapi/v2/fingerprints/options
 
 `CookieItem`：
 
-| 名称             | 类型    | 必填 | 说明                                                                      |
-| ---------------- | ------- | ---- | ------------------------------------------------------------------------- |
-| `domain`         | string  | 否   | 域名。导入 Cookie 时必填。                                                |
-| `path`           | string  | 否   | 路径。                                                                    |
-| `name`           | string  | 否   | Cookie 名称。导入 Cookie 时必填。                                         |
-| `value`          | string  | 否   | Cookie 值。导入 Cookie 时必填，可为空字符串但不能为 `null`。              |
-| `expirationDate` | integer | 否   | 过期时间，Unix 时间戳。                                                   |
-| `httpOnly`       | boolean | 否   | 是否 HttpOnly。                                                           |
-| `secure`         | boolean | 否   | 是否 Secure。                                                             |
-| `sameSite`       | string  | 否   | SameSite 策略。可选值：`unspecified`、`no_restriction`、`strict`、`lax`。 |
-| `hostOnly`       | boolean | 否   | 是否 HostOnly，兼容扩展 Cookie 格式。                                     |
-| `session`        | boolean | 否   | 是否会话 Cookie，兼容扩展 Cookie 格式。                                   |
-| `storeId`        | string  | 否   | Cookie Store ID，兼容扩展 Cookie 格式。                                   |
-| `hasExpires`     | boolean | 否   | 是否显式设置过期时间，兼容扩展 Cookie 格式。                              |
-| `priority`       | string  | 否   | 优先级，兼容扩展 Cookie 格式。                                            |
-| `isSameParty`    | boolean | 否   | 是否 SameParty。                                                          |
+| 名称              | 类型    | 必填     | 说明                                                                      |
+| ----------------- | ------- | -------- | ------------------------------------------------------------------------- |
+| `domain`          | string  | 导入时是 | 域名。                                                                    |
+| `path`            | string  | 否       | 路径。                                                                    |
+| `name`            | string  | 导入时是 | Cookie 名称。                                                             |
+| `value`           | string  | 导入时是 | Cookie 值，可为空字符串但不能为 `null`。                                  |
+| `encrypted_value` | string  | 否       | Cookie 加密存储值，仅用于读取响应；导入时请使用 `value`。                 |
+| `expiration_date` | integer | 否       | 过期时间，Unix 时间戳秒。                                                 |
+| `http_only`       | boolean | 否       | 是否 HttpOnly。                                                           |
+| `secure`          | boolean | 否       | 是否 Secure。                                                             |
+| `same_site`       | string  | 否       | SameSite 策略。可选值：`unspecified`、`no_restriction`、`strict`、`lax`。 |
+| `host_only`       | boolean | 否       | 是否 HostOnly，兼容扩展 Cookie 格式。                                     |
+| `session`         | boolean | 否       | 是否会话 Cookie，兼容扩展 Cookie 格式。                                   |
+| `store_id`        | string  | 否       | Cookie Store ID，兼容扩展 Cookie 格式。                                   |
+| `has_expires`     | boolean | 否       | 是否显式设置过期时间，兼容扩展 Cookie 格式。                              |
+| `priority`        | string  | 否       | 优先级，兼容扩展 Cookie 格式。                                            |
+| `is_same_party`   | boolean | 否       | 是否 SameParty。                                                          |
 
 ## 代理参数
 
@@ -2632,25 +2654,37 @@ GET /openapi/v2/fingerprints/options
 
 `GET /openapi/v2/fingerprints/options` 的 `data` 可能包含：
 
-| 名称                                   | 类型     | 说明                   |
-| -------------------------------------- | -------- | ---------------------- |
-| `os_options`                           | string[] | 系统类型选项。         |
-| `kernel_version_options`               | string[] | 浏览器内核版本选项。   |
-| `proxy_type_options`                   | string[] | 代理类型选项。         |
-| `ip_check_provider_options`            | string[] | IP 检测渠道选项。      |
-| `restore_session_options`              | string[] | 恢复会话选项。         |
-| `fingerprint_language_mode_options`    | string[] | 浏览器语言模式选项。   |
-| `fingerprint_ui_language_mode_options` | string[] | 界面语言模式选项。     |
-| `timezone_mode_options`                | string[] | 时区模式选项。         |
-| `geolocation_permission_options`       | string[] | 地理位置权限选项。     |
-| `geolocation_source_options`           | string[] | 地理位置来源选项。     |
-| `fingerprint_control_mode_options`     | string[] | 通用指纹控制模式选项。 |
-| `fingerprint_value_mode_options`       | string[] | 指纹取值模式选项。     |
-| `toggle_mode_options`                  | string[] | 开关继承模式选项。     |
-| `web_rtc_mode_options`                 | string[] | WebRTC 模式选项。      |
-| `web_rtc_ip_source_options`            | string[] | WebRTC IP 来源选项。   |
-| `resolution_mode_options`              | string[] | 屏幕分辨率模式选项。   |
-| `window_size_mode_options`             | string[] | 窗口尺寸模式选项。     |
+| 名称                                   | 类型     | 说明                    |
+| -------------------------------------- | -------- | ----------------------- |
+| `os_options`                           | string[] | 系统类型选项。          |
+| `kernel_version_options`               | string[] | 浏览器内核版本选项。    |
+| `proxy_type_options`                   | string[] | 代理类型选项。          |
+| `ip_check_provider_options`            | string[] | IP 检测渠道选项。       |
+| `restore_session_options`              | string[] | 恢复会话选项。          |
+| `fingerprint_language_mode_options`    | string[] | 浏览器语言模式选项。    |
+| `fingerprint_ui_language_mode_options` | string[] | 界面语言模式选项。      |
+| `timezone_mode_options`                | string[] | 时区模式选项。          |
+| `geolocation_permission_options`       | string[] | 地理位置权限选项。      |
+| `geolocation_source_options`           | string[] | 地理位置来源选项。      |
+| `font_mode_options`                    | string[] | 字体模式选项。          |
+| `webgl_image_mode_options`             | string[] | WebGL 图像模式选项。    |
+| `webgl_metadata_mode_options`          | string[] | WebGL 元数据模式选项。  |
+| `webgpu_mode_options`                  | string[] | WebGPU 模式选项。       |
+| `audio_context_mode_options`           | string[] | AudioContext 模式选项。 |
+| `client_rects_mode_options`            | string[] | ClientRects 模式选项。  |
+| `speech_voices_mode_options`           | string[] | SpeechVoices 模式选项。 |
+| `media_devices_mode_options`           | string[] | MediaDevices 模式选项。 |
+| `cpu_cores_mode_options`               | string[] | CPU 核心数模式选项。    |
+| `memory_mode_options`                  | string[] | 内存大小模式选项。      |
+| `device_name_mode_options`             | string[] | 设备名模式选项。        |
+| `mac_address_mode_options`             | string[] | MAC 地址模式选项。      |
+| `battery_mode_options`                 | string[] | 电池模式选项。          |
+| `do_not_track_mode_options`            | string[] | Do Not Track 模式选项。 |
+| `hardware_acceleration_mode_options`   | string[] | 硬件加速模式选项。      |
+| `web_rtc_mode_options`                 | string[] | WebRTC 模式选项。       |
+| `web_rtc_ip_source_options`            | string[] | WebRTC IP 来源选项。    |
+| `resolution_mode_options`              | string[] | 屏幕分辨率模式选项。    |
+| `window_size_mode_options`             | string[] | 窗口尺寸模式选项。      |
 
 # 常见调用顺序
 
